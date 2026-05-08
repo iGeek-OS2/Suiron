@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+.Rhistory
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcarchive
+
+# Build
+build/
