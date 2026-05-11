@@ -13,8 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.3.app
+      - name: Xcode version
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
 
       - name: Build (no signing)
         run: |
@@ -24,6 +26,7 @@ jobs:
             -configuration Debug \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
+            IPHONEOS_DEPLOYMENT_TARGET=18.0 \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
