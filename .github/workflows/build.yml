@@ -21,17 +21,16 @@ jobs:
           xcodebuild build \
             -project Suiron.xcodeproj \
             -scheme Suiron \
-            -configuration Release \
+            -configuration Debug \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT=YES
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Repack as IPA
         run: |
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/Suiron.app Payload/
+          cp -r build/Build/Products/Debug-iphoneos/Suiron.app Payload/
           zip -r Suiron.ipa Payload/
 
       - name: Upload IPA
