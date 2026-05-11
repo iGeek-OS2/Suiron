@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suiron — SPI推論問題をAIが生成するiOSアプリ</title>
+  <meta name="description" content="就活SPI推論問題をAIがリアルタイム生成。タイプライター演出とハプティクスで没入感のある学習体験を。">
+  <meta property="og:title" content="Suiron — SPI推論、AIと解く">
+  <meta property="og:description" content="就活SPI推論問題をAIがリアルタイム生成するiOSミニアプリ。">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --paper:   #F6F4EE;
+      --rule:    #DDD9CF;
+      --ink:     #1A1A1A;
+      --faint:   #888880;
+      --card:    #EFEDE6;
+      --border:  #C8C4B8;
+      --line-h:  32px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: var(--paper);
+      background-image: repeating-linear-gradient(
+        transparent,
+        transparent calc(var(--line-h) - 1px),
+        var(--rule) calc(var(--line-h) - 1px),
+        var(--rule) var(--line-h)
+      );
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Layout ─── */
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ─── Nav ─── */
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background-color: rgba(246, 244, 238, 0.88);
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .nav-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: 'EB Garamond', serif;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      color: var(--faint);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--ink); }
+
+    .nav-link svg { width: 14px; height: 14px; }
+
+    /* ─── Hero ─── */
+
+    .hero {
+      padding: 96px 0 64px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--faint);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 4px 12px;
+      margin-bottom: 32px;
+      background: transparent;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--faint);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .hero-title {
+      font-family: 'EB Garamond', 'Noto Serif JP', serif;
+      font-size: clamp(42px, 8vw, 68px);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .hero-title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(14px, 3vw, 18px);
+      font-weight: 400;
+      color: var(--faint);
+      letter-spacing: 0.12em;
+      margin-bottom: 28px;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--faint);
+      max-width: 480px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 24px;
+      border-radius: 99px;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.75; }
+    .btn-primary svg { width: 16px; height: 16px; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--faint);
+      font-size: 13px;
+      font-weight: 400;
+      padding: 12px 20px;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ─── Phone Mockup ─── */
+
+    .mockup-section {
+      padding: 16px 0 80px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .phone {
+      width: 220px;
+      height: 440px;
+      border: 2px solid var(--border);
+      border-radius: 36px;
+      background: var(--card);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 2px 0 var(--border), 0 24px 48px rgba(0,0,0,0.07);
+    }
+
+    .phone-notch {
+      width: 72px;
+      height: 22px;
+      background: var(--paper);
+      border-radius: 0 0 18px 18px;
+      margin: 0 auto 0;
+      position: relative;
+      z-index: 2;
+      border: 1.5px solid var(--border);
+      border-top: none;
+    }
+
+    .phone-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      gap: 0;
+    }
+
+    .phone-app-name {
+      font-family: 'EB Garamond', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .phone-app-sub {
+      font-size: 9px;
+      color: var(--faint);
+      letter-spacing: 0.04em;
+      margin-bottom: 40px;
+    }
+
+    .phone-quiz-card {
+      width: 100%;
+      background: var(--paper);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border: 1px solid var(--rule);
+    }
+
+    .phone-q-label {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 5px;
+    }
+
+    .phone-q-text {
+      font-size: 8px;
+      color: var(--faint);
+      line-height: 1.6;
+    }
+
+    .phone-choices {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .phone-choice {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 99px;
+      padding: 6px 10px;
+    }
+    .phone-choice.correct {
+      border-color: var(--ink);
+    }
+
+    .phone-choice-badge {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .phone-choice.correct .phone-choice-badge {
+      background: var(--ink);
+    }
+
+    .phone-choice-text {
+      font-size: 7.5px;
+      color: var(--ink);
+    }
+
+    .phone-progress {
+      position: absolute;
+      top: 28px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--rule);
+    }
+
+    .phone-progress-fill {
+      height: 100%;
+      width: 60%;
+      background: var(--ink);
+    }
+
+    /* ─── Divider ─── */
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 0;
+    }
+
+    /* ─── Features ─── */
+
+    .features {
+      padding: 72px 0;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--faint);
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      font-weight: 500;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .feature-cell {
+      background: var(--paper);
+      padding: 28px 24px;
+    }
+
+    .feature-cell:nth-child(1) { border-radius: 15px 0 0 0; }
+    .feature-cell:nth-child(2) { border-radius: 0 15px 0 0; }
+    .feature-cell:nth-child(3) { border-radius: 0 0 0 15px; }
+    .feature-cell:nth-child(4) { border-radius: 0 0 15px 0; }
+
+    .feature-icon {
+      font-size: 22px;
+      margin-bottom: 12px;
+      display: block;
+      filter: grayscale(1);
+      opacity: 0.75;
+    }
+
+    .feature-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .feature-desc {
+      font-size: 12.5px;
+      color: var(--faint);
+      line-height: 1.75;
+    }
+
+    /* ─── Spec ─── */
+
+    .spec {
+      padding: 64px 0;
+    }
+
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .spec-table tr {
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .spec-table tr:first-child {
+      border-top: 1px solid var(--rule);
+    }
+
+    .spec-table td {
+      padding: 14px 4px;
+      vertical-align: top;
+    }
+
+    .spec-table td:first-child {
+      color: var(--faint);
+      width: 130px;
+      padding-right: 20px;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .spec-table td:last-child {
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 7px;
+      color: var(--faint);
+      margin: 2px 2px 2px 0;
+    }
+
+    /* ─── Flow ─── */
+
+    .flow {
+      padding: 64px 0;
+    }
+
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 20px;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .flow-step:first-child {
+      border-top: 1px solid var(--rule);
+    }
+
+    .flow-num {
+      font-family: 'EB Garamond', serif;
+      font-size: 32px;
+      color: var(--rule);
+      line-height: 1;
+      min-width: 36px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .flow-content {}
+
+    .flow-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .flow-desc {
+      font-size: 13px;
+      color: var(--faint);
+      line-height: 1.7;
+    }
+
+    /* ─── Footer ─── */
+
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 40px 0 64px;
+    }
+
+    .footer-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: 'EB Garamond', serif;
+      font-size: 18px;
+      color: var(--ink);
+    }
+
+    .footer-meta {
+      font-size: 12px;
+      color: var(--faint);
+      line-height: 1.7;
+    }
+
+    .footer-meta a {
+      color: var(--faint);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .footer-meta a:hover { color: var(--ink); }
+
+    /* ─── Responsive ─── */
+
+    @media (max-width: 560px) {
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+      .feature-cell:nth-child(1) { border-radius: 15px 15px 0 0; }
+      .feature-cell:nth-child(2) { border-radius: 0; }
+      .feature-cell:nth-child(3) { border-radius: 0; }
+      .feature-cell:nth-child(4) { border-radius: 0 0 15px 15px; }
+
+      .phone { width: 190px; height: 380px; }
+      .hero  { padding: 72px 0 48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Nav ─── -->
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="#">Suiron</a>
+      <a class="nav-link" href="https://github.com/iGeek-OS2/Suiron" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <!-- ─── Hero ─── -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        開発中 · iOS App
+      </div>
+
+      <h1 class="hero-title">Suiron</h1>
+      <p class="hero-title-jp">推　論</p>
+
+      <p class="hero-desc">
+        就活SPI推論問題を、AIがリアルタイムで生成。<br>
+        タイプライター演出と手書きメモで、本番さながらの集中を。
+      </p>
+
+      <div class="cta-group">
+        <a class="btn-primary" href="https://github.com/iGeek-OS2/Suiron" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          GitHubで見る
+        </a>
+        <span class="btn-secondary">App Store — 近日公開予定</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Phone Mockup ─── -->
+  <div class="mockup-section">
+    <div class="phone">
+      <div class="phone-progress">
+        <div class="phone-progress-fill"></div>
+      </div>
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="phone-app-name">Suiron</div>
+        <div class="phone-app-sub">Create speculation test for SPI by AI...</div>
+        <div class="phone-quiz-card">
+          <div class="phone-q-label">問題二</div>
+          <div class="phone-q-text">A、B、C、D の4人が順位を競う。<br>A は B より上、B は C より上である。</div>
+        </div>
+        <div class="phone-choices">
+          <div class="phone-choice">
+            <div class="phone-choice-badge">A</div>
+            <div class="phone-choice-text">AはCより上位</div>
+          </div>
+          <div class="phone-choice correct">
+            <div class="phone-choice-badge">B</div>
+            <div class="phone-choice-text">CはDより上位とは限らない</div>
+          </div>
+          <div class="phone-choice">
+            <div class="phone-choice-badge">C</div>
+            <div class="phone-choice-text">BはDより必ず上位</div>
+          </div>
+          <div class="phone-choice">
+            <div class="phone-choice-badge">D</div>
+            <div class="phone-choice-text">AはDより下位の可能性</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ─── Features ─── -->
+  <section class="features">
+    <div class="container">
+      <p class="section-label">Features</p>
+      <div class="feature-grid">
+        <div class="feature-cell">
+          <span class="feature-icon">✦</span>
+          <div class="feature-title">AI問題生成</div>
+          <div class="feature-desc">Gemini APIが毎回新しい推論問題を5問生成。同じ問題は出ない。</div>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-icon">▌</span>
+          <div class="feature-title">タイプライター演出</div>
+          <div class="feature-desc">問題文が1文字ずつ表示。読み終わる頃に選択肢がスライドイン。</div>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-icon">✎</span>
+          <div class="feature-title">手書きメモ</div>
+          <div class="feature-desc">PencilKitで問題を考えながらメモ。シートを半開きにしたまま問題を見られる。</div>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-icon">✧</span>
+          <div class="feature-title">詳細解説</div>
+          <div class="feature-desc">全体の解き方と各選択肢の正誤理由を表示。「もっと解説」でAIが補足。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ─── Flow ─── -->
+  <section class="flow">
+    <div class="container">
+      <p class="section-label">How it works</p>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <div class="flow-title">APIキーを設定する</div>
+            <div class="flow-desc">Google AI Studioで取得したGemini APIキーを入力。キーはKeychainに安全に保存される。</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <div class="flow-title">Startを押す</div>
+            <div class="flow-desc">AIが5問をリアルタイム生成。受信しながらバリデーションし、問題の質を担保する。</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <div class="flow-title">問題を解く</div>
+            <div class="flow-desc">タイプライター演出で問題文を読み、4択から解答。正誤に応じてハプティクスが返る。</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content">
+            <div class="flow-title">解説を確認する</div>
+            <div class="flow-desc">各問題の解き方と全選択肢の解説を確認。不明点はAIに追加解説を依頼できる。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ─── Tech Spec ─── -->
+  <section class="spec">
+    <div class="container">
+      <p class="section-label">Tech Stack</p>
+      <table class="spec-table">
+        <tr>
+          <td>言語 / フレームワーク</td>
+          <td>
+            <span class="tag">Swift 5.9+</span>
+            <span class="tag">SwiftUI</span>
+            <span class="tag">iOS 17+</span>
+          </td>
+        </tr>
+        <tr>
+          <td>状態管理</td>
+          <td>
+            <span class="tag">@Observable</span>
+            <span class="tag">@MainActor</span>
+            <span class="tag">async/await</span>
+          </td>
+        </tr>
+        <tr>
+          <td>AI</td>
+          <td>
+            <span class="tag">Gemini API</span>
+            <span class="tag">gemini-3-flash-preview</span>
+            <span class="tag">Streaming</span>
+          </td>
+        </tr>
+        <tr>
+          <td>データ保存</td>
+          <td>
+            <span class="tag">Keychain</span>
+            <span class="tag">UserDefaults</span>
+          </td>
+        </tr>
+        <tr>
+          <td>その他</td>
+          <td>
+            <span class="tag">PencilKit</span>
+            <span class="tag">SensoryFeedback</span>
+          </td>
+        </tr>
+        <tr>
+          <td>ライセンス</td>
+          <td>MIT</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── Footer ─── -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">Suiron</div>
+      <div class="footer-meta">
+        Built with Swift &amp; Gemini API ·
+        <a href="https://github.com/iGeek-OS2/Suiron" target="_blank" rel="noopener">GitHub</a>
+        · MIT License
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
