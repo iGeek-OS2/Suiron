@@ -14,16 +14,10 @@
 ## 対応AI
 | プロバイダー | 表示名 | APIモデル文字列 | エンドポイント |
 |---|---|---|---|
-| OpenAI | ChatGPT | `gpt-5.4-mini` | https://api.openai.com/v1/chat/completions |
-| Gemini | Gemini | `gemini-3.1-flash-lite` | https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent |
-| Claude | Claude | `claude-sonnet-4-6` | https://api.anthropic.com/v1/messages |
+| Gemini | Gemini | `gemini-3.1-flash` | https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent |
 
-> **モデル選定理由**: 問題生成（テキストのみ）はミニアプリ用途のため、コスト・レイテンシ重視の軽量モデルを採用。
-> - GPT-5.5（最上位）ではなく `gpt-5.4-mini`（高速・低コスト）
-> - Gemini 3.1 Pro Previewではなく `gemini-3.1-flash-lite`（最軽量・最安価）
-> - Claude Sonnet 4.6（`claude-sonnet-4-6`）はコスト/性能バランスが最良のため採用
->
-> ユーザーが上位モデルに切り替えたい場合は将来的に設定画面で選択できるよう拡張可能にしておくこと。
+> **現在の実装対象**: Gemini のみ。OpenAI（gpt-5.5）・Claude（claude-sonnet-4-6）は将来追加予定。
+> SetupSheetView のAI選択UIも現時点では Gemini の1択にしておくこと。
 
 ## 画面構成
 ```
@@ -84,17 +78,42 @@ enum AIProvider: String, CaseIterable {
 ```
 
 ## AI問題生成プロンプト（共通）
+
+### システムプロンプト
 ```
-就活SPIの推論問題（発言の真偽を推理するタイプ）を5問作成してください。
-難易度：普通。
-以下のJSON配列のみを返してください。説明文は不要です。
+あなたは日本の就活SPI試験の問題作成の専門家です。
+本物のSPIに出題される推論問題のみを作成してください。
+
+【出題する問題の8パターン】
+以下の8種類からランダムに組み合わせて出題すること（5問で偏りが出ないよう分散させる）：
+1. 順序：複数人の順位・順番を条件から特定する（例：テストの成績順）
+2. 対応：人物と属性（出身地・担当・趣味など）の組み合わせを表で推理する
+3. 整数：カードの数・人数・数の組み合わせを条件から推測する（最頻出）
+4. 位置関係：席・位置・方向を「AはBの右隣」などの条件から確定させる
+5. 内訳・割合：集合の内訳や割合を条件から推理する
+6. 対戦：勝敗の結果から順位や未知の対戦結果を推理する
+7. 正誤判断：複数の条件をもとに選択肢の文章が正しいか誤っているかを判断する
+8. 情報の信頼性：複数の情報の一部が誤りである場合に成立する組み合わせを推理する
+
+【禁止事項】
+- 選択肢の番号・文字と問題中の人物名を同じにしない
+- 正解が複数存在する問題は出題しない（必ず答えが一意に決まること）
+- 問題を作成したら、正解が本当に一意かを自分で検証してから出力する
+- 同じパターンを連続して3問以上出題しない
+```
+
+### ユーザープロンプト
+```
+上記の条件でSPI推論問題を5問作成してください。
+難易度：普通（就活生が練習で解くレベル）。
+以下のJSON配列のみを返してください。前置き・説明文・コードブロック記号は不要です。
 
 [
   {
-    "text": "問題文",
-    "choices": ["選択肢A","選択肢B","選択肢C","選択肢D"],
+    "text": "問題文（登場人物はア・イ・ウ・エなどカタカナを使うこと）",
+    "choices": ["選択肢1の文章","選択肢2の文章","選択肢3の文章","選択肢4の文章"],
     "answerIndex": 0,
-    "explanation": "解説文"
+    "explanation": "なぜその選択肢が正解なのか、そして解き方の流れをわかりやすく解説"
   }
 ]
 ```
@@ -104,6 +123,14 @@ enum AIProvider: String, CaseIterable {
 - **閉じる制御**: `.interactiveDismissDisabled(true)`（設定完了前は閉じ不可）
 - **表示タイミング**: `setupComplete == false` の場合、HomeView表示時に自動で出現
 - **保存先**: 選択AIは `UserDefaults`、APIキーは `Keychain`
+
+## ビルドルール（必須）
+- コードを編集したら **必ず** 以下のコマンドでビルドを実行すること
+  ```
+  xcodebuild -scheme Suiron -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | grep -E 'error:|Build succeeded|Build FAILED'
+  ```
+- ビルドエラーが出た場合はそのまま自動修正し、再度ビルドが成功するまで繰り返すこと
+- SourceKit（LSP）の警告はビルドエラーではないため無視してよい
 
 ## コーディングルール
 - `async/await` を使用（コールバック・Combineは使わない）
@@ -118,15 +145,3 @@ enum AIProvider: String, CaseIterable {
 - ハードコードされたAPIキーをコードに含めない
 - force unwrap（`!`）を使わない
 - MainThread以外でのUI更新
-
-## 開発の進め方
-実装は以下の順番で進める。各フェーズ完了後に確認を求めること。
-
-1. `Phase 0` — モデル定義 + フォルダ構成
-2. `Phase 1` — APIサービス層（Mock含む）
-3. `Phase 2` — SetupSheetView
-4. `Phase 3` — HomeView + 落下アニメーション
-5. `Phase 4` — QuizView + タイプライター
-6. `Phase 5` — ResultView + 仕上げ
-
-各フェーズ完了時：「✅ Phase X 完了。次に進みますか？」と確認すること。

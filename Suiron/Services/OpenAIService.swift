@@ -7,7 +7,7 @@ import Foundation
 struct OpenAIService: AIServiceProtocol {
     private let provider = AIProvider.openai
 
-    func generateQuestions(apiKey: String) async throws -> [Question] {
+    func generateQuestions(apiKey: String, difficulty: DifficultyLevel) async throws -> [Question] {
         var request = URLRequest(url: provider.endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -16,7 +16,8 @@ struct OpenAIService: AIServiceProtocol {
         let body: [String: Any] = [
             "model": provider.modelID,
             "messages": [
-                ["role": "user", "content": kGeneratePrompt]
+                ["role": "system", "content": kSystemPrompt],
+                ["role": "user", "content": kUserPrompt(difficulty: difficulty)]
             ]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

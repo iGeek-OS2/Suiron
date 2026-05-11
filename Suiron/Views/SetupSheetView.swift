@@ -6,6 +6,7 @@ import SwiftUI
 
 struct SetupSheetView: View {
     @Bindable var viewModel: SetupViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var appeared = false
     @State private var hapticTrigger = false
 
@@ -48,9 +49,9 @@ struct SetupSheetView: View {
             }
             .padding(16)
             .background(Color.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 24)
                     .stroke(Color.accent, lineWidth: 2)
             )
             .padding(.horizontal, 24)
@@ -58,7 +59,7 @@ struct SetupSheetView: View {
             .offset(y: appeared ? 0 : 20)
             .animation(.easeOut(duration: 0.3).delay(0.08), value: appeared)
 
-            Spacer().frame(height: 20)
+            Spacer().frame(height: 16)
 
             // APIキー入力欄
             VStack(alignment: .leading, spacing: 8) {
@@ -68,8 +69,8 @@ struct SetupSheetView: View {
 
                 SecureField("AIzaSy...", text: $viewModel.apiKey)
                     .padding(14)
-                    .background(Color(hex: "#F5F5F5"))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color.inputBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .font(.system(size: 15, design: .monospaced))
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
@@ -78,6 +79,16 @@ struct SetupSheetView: View {
                     Text(error)
                         .font(.system(size: 12))
                         .foregroundStyle(Color.incorrect)
+                }
+
+                Link(destination: URL(string: "https://aistudio.google.com/")!) {
+                    HStack(spacing: 4) {
+                        Text("APIキーを取得する")
+                            .font(.system(size: 12))
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(Color.textSecondary)
                 }
             }
             .padding(.horizontal, 24)
@@ -91,14 +102,15 @@ struct SetupSheetView: View {
             Button {
                 hapticTrigger.toggle()
                 viewModel.save()
+                if viewModel.isSetupComplete { dismiss() }
             } label: {
                 Text("はじめる")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.appBackground)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(Color.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
             }
             .disabled(!viewModel.canProceed)
             .opacity(viewModel.canProceed ? 1.0 : 0.4)

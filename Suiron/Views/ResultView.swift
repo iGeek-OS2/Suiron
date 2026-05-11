@@ -54,7 +54,7 @@ struct ResultView: View {
                 // もう一度ボタン
                 Button("もう一度", action: onPlayAgain)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.appBackground)
                     .frame(width: 280, height: 52)
                     .background(Color.accent)
                     .clipShape(Capsule())

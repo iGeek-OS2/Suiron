@@ -3,6 +3,7 @@
 //  Suiron
 
 import SwiftUI
+import PencilKit
 
 // MARK: - Choice State
 
@@ -21,34 +22,104 @@ private struct ChoiceDisplayState {
         icon: nil, iconColor: .clear
     )
     static let correct = ChoiceDisplayState(
-        background: .correctBg,
-        border: .correct, borderWidth: 2,
-        badgeBackground: .correct,
-        icon: "checkmark", iconColor: .correct
+        background: .cardBackground,
+        border: .textPrimary, borderWidth: 2,
+        badgeBackground: .textPrimary,
+        icon: "checkmark", iconColor: .textPrimary
     )
     static let incorrect = ChoiceDisplayState(
-        background: .incorrectBg,
-        border: .incorrect, borderWidth: 2,
-        badgeBackground: .incorrect,
-        icon: "xmark", iconColor: .incorrect
+        background: .cardBackground,
+        border: .textPrimary, borderWidth: 2,
+        badgeBackground: .textSecondary,
+        icon: nil, iconColor: .clear
     )
     static let revealCorrect = ChoiceDisplayState(
-        background: .correctBg,
-        border: .correct, borderWidth: 2,
-        badgeBackground: .correct,
-        icon: "checkmark", iconColor: .correct
+        background: .cardBackground,
+        border: .textPrimary, borderWidth: 2,
+        badgeBackground: .textPrimary,
+        icon: "checkmark", iconColor: .textPrimary
     )
+}
+
+// MARK: - Compile Loading View
+
+private struct ThreeDotsView: View {
+    @State private var phase = 0
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Color.textPrimary)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(phase == i ? 1.4 : 1.0)
+                    .opacity(phase == i ? 1.0 : 0.35)
+                    .animation(.easeInOut(duration: 0.4), value: phase)
+            }
+        }
+        .onAppear {
+            Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+                phase = (phase + 1) % 3
+            }
+        }
+    }
+}
+
+private struct CompileLoadingView: View {
+    let streamingText: String
+
+    private var statusText: String {
+        if streamingText.isEmpty {
+            return "AIにプロンプトを送信中..."
+        } else {
+            return "レスポンスを受信中... (\(streamingText.count)文字)"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ThreeDotsView()
+            VStack(spacing: 7) {
+                Text("問題を生成中")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+                Text(statusText)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
+    }
+}
+
+// MARK: - Shake Effect
+
+private struct ShakeEffect: GeometryEffect {
+    var amount: CGFloat
+    var animatableData: CGFloat {
+        get { amount }
+        set { amount = newValue }
+    }
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        .init(CGAffineTransform(translationX: 9 * sin(amount * .pi * 5), y: 0))
+    }
 }
 
 // MARK: - QuizView
 
 struct QuizView: View {
     let onDismiss: () -> Void
+    var forPreview: Bool = false
 
     @State private var viewModel = QuizViewModel()
     @State private var cursorVisible = true
     @State private var successHaptic = false
     @State private var errorHaptic = false
+    @State private var textRevealHaptic = false
+    @State private var shakeProgress: CGFloat = 0
+    @State private var correctPulse: CGFloat = 1.0
+    @State private var isMemoPresented = false
+    @State private var memoDrawing = PKDrawing()
+    @State private var memoDetent: PresentationDetent = .fraction(0.45)
 
     var body: some View {
         ZStack {
@@ -69,6 +140,7 @@ struct QuizView: View {
                    let selected = viewModel.selectedIndex {
                     ExplanationView(
                         question: question,
+                        questionNumber: viewModel.currentIndex + 1,
                         selectedIndex: selected,
                         isLast: viewModel.currentIndex + 1 >= viewModel.questions.count,
                         onNext: { Task { await viewModel.advance() } }
@@ -88,37 +160,100 @@ struct QuizView: View {
             case .error(let error):
                 errorView(error)
             }
+
+            // メモボタン（quiz状態のみ）
+            if case .quiz = viewModel.quizState {
+                memoButton
+            }
+
         }
-        .task { await viewModel.start() }
+        .sheet(isPresented: $isMemoPresented) {
+            MemoSheetView(drawing: $memoDrawing)
+                .presentationDetents([.fraction(0.45), .large], selection: $memoDetent)
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+                .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.45)))
+        }
+        .onChange(of: viewModel.currentIndex) { _, _ in
+            memoDrawing = PKDrawing()
+            isMemoPresented = false
+        }
+        .task {
+            if forPreview { viewModel.loadPreview() }
+            else { await viewModel.start() }
+        }
         .sensoryFeedback(.success, trigger: successHaptic)
         .sensoryFeedback(.error,   trigger: errorHaptic)
+        .sensoryFeedback(.impact(weight: .light), trigger: textRevealHaptic)
+        .onChange(of: viewModel.isTyping) { _, isTyping in
+            if !isTyping, case .quiz = viewModel.quizState {
+                textRevealHaptic.toggle()
+            }
+        }
         .onChange(of: viewModel.selectedIndex) { _, newValue in
             guard let selected = newValue,
                   let question = viewModel.currentQuestion else { return }
             if selected == question.answerIndex {
                 successHaptic.toggle()
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.35)) {
+                    correctPulse = 1.07
+                }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                        correctPulse = 1.0
+                    }
+                }
             } else {
                 errorHaptic.toggle()
+                withAnimation(.linear(duration: 0.45)) {
+                    shakeProgress = 1
+                }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    shakeProgress = 0
+                }
             }
         }
+    }
+
+    // MARK: - Memo Button
+
+    private var memoButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    memoDetent = .fraction(0.45)
+                    isMemoPresented = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(width: 52, height: 52)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 48)
+            }
+        }
+        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: - Loading
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.4)
-            Text("問題を生成中...")
-                .font(.system(size: 15))
-                .foregroundStyle(Color.textSecondary)
-        }
+        CompileLoadingView(streamingText: viewModel.loadingText)
     }
 
     // MARK: - Error
 
     private func errorView(_ error: AppError) -> some View {
-        VStack(spacing: 20) {
+        let isRateLimit = error == .rateLimitError
+        return VStack(spacing: 20) {
             Text("エラーが発生しました")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
@@ -127,14 +262,23 @@ struct QuizView: View {
                 .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("もう一度試す") {
-                Task { await viewModel.start() }
+            if isRateLimit {
+                Button("ホームに戻る") { onDismiss() }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.appBackground)
+                    .frame(width: 200, height: 48)
+                    .background(Color.accent)
+                    .clipShape(Capsule())
+            } else {
+                Button("もう一度試す") {
+                    Task { await viewModel.start() }
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.appBackground)
+                .frame(width: 200, height: 48)
+                .background(Color.accent)
+                .clipShape(Capsule())
             }
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 200, height: 48)
-            .background(Color.accent)
-            .clipShape(Capsule())
         }
     }
 
@@ -145,10 +289,10 @@ struct QuizView: View {
             progressBar
 
             ScrollView {
-                VStack(alignment: .trailing, spacing: 16) {
-                    progressBadge
-                        .padding(.trailing, 20)
-                        .padding(.top, 16)
+                VStack(alignment: .leading, spacing: 16) {
+                    questionHeading
+                        .padding(.horizontal, 20)
+                        .padding(.top, 40)
 
                     questionCard
                         .padding(.horizontal, 20)
@@ -172,45 +316,6 @@ struct QuizView: View {
             }
             cursorVisible = false
         }
-    }
-
-    // MARK: - Progress Bar
-
-    private var progressBar: some View {
-        GeometryReader { geo in
-            Rectangle()
-                .fill(Color.accent)
-                .frame(width: geo.size.width * viewModel.progress, height: 3)
-                .animation(.easeInOut(duration: 0.35), value: viewModel.progress)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(height: 3)
-    }
-
-    // MARK: - Progress Badge
-
-    private var progressBadge: some View {
-        Text("\(viewModel.currentIndex + 1) / \(viewModel.questions.count)")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(Color.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color(hex: "#E0E0E0"))
-            .clipShape(Capsule())
-    }
-
-    // MARK: - Question Card
-
-    private var questionCard: some View {
-        let cursor = viewModel.isTyping && cursorVisible ? "|" : ""
-        return Text(viewModel.displayedText + cursor)
-            .font(.system(size: 16))
-            .lineSpacing(6)
-            .foregroundStyle(Color.textPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .background(Color.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: - Choices
@@ -241,17 +346,16 @@ struct QuizView: View {
                     Circle()
                         .fill(s.badgeBackground)
                         .frame(width: 28, height: 28)
-                    Text("\(index + 1)")
+                    let letters = ["A", "B", "C", "D"]
+                    Text(index < letters.count ? letters[index] : "\(index + 1)")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.appBackground)
                 }
-
                 Text(text)
                     .font(.system(size: 15))
                     .foregroundStyle(Color.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .minimumScaleFactor(0.8)
-
                 if let icon = s.icon {
                     Image(systemName: icon)
                         .foregroundStyle(s.iconColor)
@@ -261,13 +365,15 @@ struct QuizView: View {
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, minHeight: 52)
             .background(s.background)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay {
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 24)
                     .stroke(s.border, lineWidth: s.borderWidth)
             }
         }
         .disabled(viewModel.selectedIndex != nil)
+        .modifier(ShakeEffect(amount: (viewModel.selectedIndex == index && index != question.answerIndex) ? shakeProgress : 0))
+        .scaleEffect((viewModel.selectedIndex == index && index == question.answerIndex) ? correctPulse : 1.0)
         .accessibilityLabel("選択肢\(index + 1): \(text)")
     }
 
@@ -282,10 +388,49 @@ struct QuizView: View {
         if !isSelected && isCorrect { return .revealCorrect }
         return .idle
     }
+
+    // MARK: - Progress Bar
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            Rectangle()
+                .fill(Color.accent)
+                .frame(width: geo.size.width * viewModel.progress, height: 3)
+                .animation(.easeInOut(duration: 0.35), value: viewModel.progress)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 3)
+    }
+
+    // MARK: - Question Heading
+
+    private static let kanjiNumbers = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
+
+    private var questionHeading: some View {
+        let kanji = viewModel.currentIndex < Self.kanjiNumbers.count
+            ? Self.kanjiNumbers[viewModel.currentIndex] : "\(viewModel.currentIndex + 1)"
+        return Text("問題\(kanji)")
+            .font(.system(size: 30, design: .serif).weight(.bold))
+            .foregroundStyle(Color.textPrimary)
+    }
+
+    // MARK: - Question Card
+
+    private var questionCard: some View {
+        let cursor = viewModel.isTyping && cursorVisible ? "|" : ""
+        return Text(viewModel.displayedText + cursor)
+            .font(.system(size: 14, design: .serif).weight(.medium))
+            .lineSpacing(6)
+            .foregroundStyle(Color.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
+    }
+
 }
 
 // MARK: - Preview
 
-#Preview {
-    QuizView(onDismiss: {})
+#Preview("Quiz") {
+    QuizView(onDismiss: {}, forPreview: true)
 }
+

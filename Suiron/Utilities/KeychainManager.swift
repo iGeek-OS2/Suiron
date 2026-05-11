@@ -14,6 +14,7 @@ struct KeychainManager {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: provider.rawValue,
             kSecAttrAccount as String: account,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
             kSecValueData as String: data
         ]
         SecItemDelete(query as CFDictionary)
