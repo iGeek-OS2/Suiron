@@ -31,12 +31,6 @@
     body {
       font-family: 'Noto Sans JP', sans-serif;
       background-color: var(--paper);
-      background-image: repeating-linear-gradient(
-        transparent,
-        transparent calc(var(--line-h) - 1px),
-        var(--rule) calc(var(--line-h) - 1px),
-        var(--rule) var(--line-h)
-      );
       color: var(--ink);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
@@ -215,16 +209,16 @@
       box-shadow: 0 2px 0 var(--border), 0 24px 48px rgba(0,0,0,0.07);
     }
 
-    .phone-notch {
-      width: 72px;
-      height: 22px;
-      background: var(--paper);
-      border-radius: 0 0 18px 18px;
-      margin: 0 auto 0;
-      position: relative;
+    .phone-dynamic-island {
+      width: 60px;
+      height: 18px;
+      background: #111;
+      border-radius: 99px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 2;
-      border: 1.5px solid var(--border);
-      border-top: none;
     }
 
     .phone-screen {
@@ -291,9 +285,56 @@
       border: 1px solid var(--rule);
       border-radius: 99px;
       padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  border-color 0.2s ease,
+                  background 0.2s ease,
+                  opacity 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .phone-choice.correct {
+    .phone-choice.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .phone-choice:active {
+      transform: scale(0.96);
+    }
+    .phone-choice.state-correct {
       border-color: var(--ink);
+      border-width: 1.5px;
+    }
+    .phone-choice.state-incorrect {
+      border-color: #bbb;
+      border-width: 1.5px;
+    }
+    .phone-choice.state-reveal {
+      border-color: var(--ink);
+      border-width: 1.5px;
+    }
+    .phone-choice.state-locked {
+      cursor: default;
+    }
+    @keyframes phone-shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-5px); }
+      40%      { transform: translateX(5px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+    .phone-choice.do-shake {
+      animation: phone-shake 0.4s ease;
+    }
+    @keyframes phone-bounce {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.07); }
+      70%  { transform: scale(0.97); }
+      100% { transform: scale(1); }
+    }
+    .phone-choice.do-bounce {
+      animation: phone-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .phone-choice-badge {
@@ -308,9 +349,10 @@
       font-weight: 700;
       color: #fff;
       flex-shrink: 0;
+      transition: background 0.2s ease;
     }
-    .phone-choice.correct .phone-choice-badge {
-      background: var(--ink);
+    .phone-choice.state-incorrect .phone-choice-badge {
+      background: #bbb;
     }
 
     .phone-choice-text {
@@ -320,7 +362,7 @@
 
     .phone-progress {
       position: absolute;
-      top: 28px;
+      top: 36px;
       left: 0;
       right: 0;
       height: 2px;
@@ -405,23 +447,40 @@
       padding: 64px 0;
     }
 
-    .spec-table {
-      width: 100%;
-      border-collapse: collapse;
+    .spec-table-wrap {
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .spec-row {
+      display: flex;
+      gap: 0;
+      background: var(--paper);
+      padding: 14px 20px;
+      align-items: flex-start;
+    }
+
+    .spec-row:first-child { border-radius: 15px 15px 0 0; }
+    .spec-row:last-child  { border-radius: 0 0 15px 15px; }
+
+    .spec-label {
+      color: var(--faint);
+      width: 130px;
+      flex-shrink: 0;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      padding-top: 2px;
+    }
+
+    .spec-value {
+      color: var(--ink);
       font-size: 13px;
-    }
-
-    .spec-table tr {
-      border-bottom: 1px solid var(--rule);
-    }
-
-    .spec-table tr:first-child {
-      border-top: 1px solid var(--rule);
-    }
-
-    .spec-table td {
-      padding: 14px 4px;
-      vertical-align: top;
+      line-height: 1.6;
     }
 
     .spec-table td:first-child {
@@ -456,19 +515,22 @@
     .flow-steps {
       display: flex;
       flex-direction: column;
-      gap: 0;
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 16px;
+      overflow: hidden;
     }
 
     .flow-step {
       display: flex;
       gap: 20px;
-      padding: 24px 0;
-      border-bottom: 1px solid var(--rule);
+      padding: 24px 20px;
+      background: var(--paper);
     }
 
-    .flow-step:first-child {
-      border-top: 1px solid var(--rule);
-    }
+    .flow-step:first-child { border-radius: 15px 15px 0 0; }
+    .flow-step:last-child  { border-radius: 0 0 15px 15px; }
 
     .flow-num {
       font-family: 'EB Garamond', serif;
@@ -573,7 +635,6 @@
       </div>
 
       <h1 class="hero-title">Suiron</h1>
-      <p class="hero-title-jp">推　論</p>
 
       <p class="hero-desc">
         就活SPI推論問題を、AIがリアルタイムで生成。<br>
@@ -598,7 +659,7 @@
       <div class="phone-progress">
         <div class="phone-progress-fill"></div>
       </div>
-      <div class="phone-notch"></div>
+      <div class="phone-dynamic-island"></div>
       <div class="phone-screen">
         <div class="phone-app-name">Suiron</div>
         <div class="phone-app-sub">Create speculation test for SPI by AI...</div>
@@ -606,20 +667,20 @@
           <div class="phone-q-label">問題二</div>
           <div class="phone-q-text">A、B、C、D の4人が順位を競う。<br>A は B より上、B は C より上である。</div>
         </div>
-        <div class="phone-choices">
-          <div class="phone-choice">
+        <div class="phone-choices" id="phoneChoices" data-answer="1">
+          <div class="phone-choice" data-index="0">
             <div class="phone-choice-badge">A</div>
             <div class="phone-choice-text">AはCより上位</div>
           </div>
-          <div class="phone-choice correct">
+          <div class="phone-choice" data-index="1">
             <div class="phone-choice-badge">B</div>
             <div class="phone-choice-text">CはDより上位とは限らない</div>
           </div>
-          <div class="phone-choice">
+          <div class="phone-choice" data-index="2">
             <div class="phone-choice-badge">C</div>
             <div class="phone-choice-text">BはDより必ず上位</div>
           </div>
-          <div class="phone-choice">
+          <div class="phone-choice" data-index="3">
             <div class="phone-choice-badge">D</div>
             <div class="phone-choice-text">AはDより下位の可能性</div>
           </div>
@@ -704,50 +765,50 @@
   <section class="spec">
     <div class="container">
       <p class="section-label">Tech Stack</p>
-      <table class="spec-table">
-        <tr>
-          <td>言語 / フレームワーク</td>
-          <td>
+      <div class="spec-table-wrap">
+        <div class="spec-row">
+          <div class="spec-label">言語 / フレームワーク</div>
+          <div class="spec-value">
             <span class="tag">Swift 5.9+</span>
             <span class="tag">SwiftUI</span>
             <span class="tag">iOS 17+</span>
-          </td>
-        </tr>
-        <tr>
-          <td>状態管理</td>
-          <td>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-label">状態管理</div>
+          <div class="spec-value">
             <span class="tag">@Observable</span>
             <span class="tag">@MainActor</span>
             <span class="tag">async/await</span>
-          </td>
-        </tr>
-        <tr>
-          <td>AI</td>
-          <td>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-label">AI</div>
+          <div class="spec-value">
             <span class="tag">Gemini API</span>
             <span class="tag">gemini-3-flash-preview</span>
             <span class="tag">Streaming</span>
-          </td>
-        </tr>
-        <tr>
-          <td>データ保存</td>
-          <td>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-label">データ保存</div>
+          <div class="spec-value">
             <span class="tag">Keychain</span>
             <span class="tag">UserDefaults</span>
-          </td>
-        </tr>
-        <tr>
-          <td>その他</td>
-          <td>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-label">その他</div>
+          <div class="spec-value">
             <span class="tag">PencilKit</span>
             <span class="tag">SensoryFeedback</span>
-          </td>
-        </tr>
-        <tr>
-          <td>ライセンス</td>
-          <td>MIT</td>
-        </tr>
-      </table>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-label">ライセンス</div>
+          <div class="spec-value">MIT</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -763,5 +824,54 @@
     </div>
   </footer>
 
+  <script>
+    // スクロール連動：選択肢のスタッガーイン
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        choices.forEach((c, i) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => c.classList.add('visible'), i * 80);
+          } else {
+            c.classList.remove('visible');
+          }
+        });
+      });
+    }, { threshold: 0.5 });
+    observer.observe(document.getElementById('phoneChoices'));
+
+    const container = document.getElementById('phoneChoices');
+    const correctIndex = parseInt(container.dataset.answer);
+    const choices = container.querySelectorAll('.phone-choice');
+    let locked = false;
+
+    choices.forEach(el => {
+      el.addEventListener('click', () => {
+        if (locked) return;
+        locked = true;
+        const idx = parseInt(el.dataset.index);
+        const isCorrect = idx === correctIndex;
+
+        if (isCorrect) {
+          el.classList.add('state-correct', 'do-bounce');
+        } else {
+          el.classList.add('state-incorrect', 'do-shake');
+          choices[correctIndex].classList.add('state-reveal');
+        }
+
+        choices.forEach(c => c.classList.add('state-locked'));
+
+        // 1.6秒後にリセット
+        setTimeout(() => {
+          choices.forEach(c => {
+            c.classList.remove(
+              'state-correct','state-incorrect','state-reveal',
+              'state-locked','do-bounce','do-shake'
+            );
+          });
+          locked = false;
+        }, 1600);
+      });
+    });
+  </script>
 </body>
 </html>
