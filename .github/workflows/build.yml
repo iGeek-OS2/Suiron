@@ -25,7 +25,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT=YES
 
       - name: Repack as IPA
         run: |
