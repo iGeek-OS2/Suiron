@@ -95,6 +95,15 @@
       text-align: center;
     }
 
+    .badge-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -106,9 +115,14 @@
       border: 1px solid var(--border);
       border-radius: 99px;
       padding: 4px 12px;
-      margin-bottom: 32px;
       background: transparent;
     }
+
+    .badge-link {
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .badge-link:hover { border-color: var(--ink); color: var(--ink); }
 
     .badge-dot {
       width: 6px;
@@ -630,14 +644,14 @@
   <section class="hero">
     <div class="container">
       <div class="badge">
-        <span class="badge-dot"></span>
-        開発中 · iOS App
+        Open Source · iOS App
       </div>
 
       <h1 class="hero-title">Suiron</h1>
 
       <p class="hero-desc">
-        就活SPI推論問題を、AIがリアルタイムで生成。
+        就活SPI推論問題を、AIがリアルタイムで生成。<br>
+        Swift / SwiftUI で構築されたオープンソースプロジェクト。
       </p>
 
       <div class="cta-group">
